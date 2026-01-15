@@ -2,8 +2,6 @@ CREATE DATABASE bibliotheque;
 USE bibliotheque;
 
 
-
-
 CREATE TABLE rayons (
     id_rayon INT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(255) NOT NULL   
@@ -29,6 +27,17 @@ CREATE TABLE ouvrages (
 );
 
 
+SELECT * FROM ouvrages;
+
+ALTER TABLE ouvrages
+ADD annee_publication INT ;
+
+UPDATE ouvrages
+SET annee_publication = YEAR(date_publication);
+
+
+
+
 INSERT INTO ouvrages (titre, date_publication, id_rayon) VALUES
 ('Apprendre SQL',       '2022-01-10', 1),  
 ('Algorithmique',       '2019-09-01', 2), 
@@ -37,9 +46,6 @@ INSERT INTO ouvrages (titre, date_publication, id_rayon) VALUES
 ('Histoire du Maroc',   '2018-06-20', 5),
 ('Microéconomie',       '2021-03-11', 6), 
 ('Introduction à Kant', '2017-09-05', 7);
-
-
-
 
 
 
@@ -67,7 +73,10 @@ CREATE TABLE lecteurs (
     prenom VARCHAR(255) NOT NULL,
     telephone VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
-    CIN VARCHAR(255) NOT NULL UNIQUE);
+    CIN VARCHAR(255) NOT NULL UNIQUE
+    );
+
+
 
 
 INSERT INTO lecteurs (nom, prenom, telephone, email, CIN) VALUES
@@ -89,6 +98,8 @@ CREATE TABLE auteurs_ouvrages (
     FOREIGN KEY (id_auteur) REFERENCES auteurs(id_auteur),
     FOREIGN KEY (id_ouvrage) REFERENCES ouvrages(id_ouvrage)
 );
+
+
 
 
 INSERT INTO auteurs_ouvrages (id_auteur, id_ouvrage) VALUES
@@ -118,8 +129,6 @@ CREATE TABLE emprunts (
 
 
 
-
-
 INSERT INTO emprunts
 (id_lecteur, id_ouvrage, date_emprunt, date_retour_prevu, date_retour_reelle)
 VALUES
@@ -139,30 +148,77 @@ CREATE TABLE personnel (
     prenom VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE,
     id_chef INT NULL,
+    cin VARCHAR(255) NOT NULL,
     FOREIGN KEY (id_chef) REFERENCES personnel(id_personnel)
 );
 
 
+
+
+SELECT * FROM personnel;
+
 INSERT INTO personnel (nom, prenom, email, id_chef) VALUES
-('alae', 'Omar', 'omar@gmail.com', NULL),
-('Alaoui', 'Hassan', 'hassan@gmail.com', 1),
-('Idrissi', 'Salma', 'salma@gmail.com', 1),
-('Bennani', 'Khadija', 'khadija@gmail.com', 2),
-('Fassi', 'Mehdi', 'mehdi@gmail.com', 2),
-('Zerouali', 'Nadia', 'nadia@gmail.com', 2),
-('El Amrani', 'Youssef', 'youssef@gmail.com', 1);
+('alae', 'Omar', 'omar@gmail.com', NULL,'AA111111'),
+('Alaoui', 'Hassan', 'hassan@gmail.com', 1,'BB222222'),
+('Idrissi', 'Salma', 'salma@gmail.com', 1   ,'CC333333'),
+('Bennani', 'Khadija', 'khadija@gmail.com', 2 ,'DD444444'),
+('Fassi', 'Mehdi', 'mehdi@gmail.com', 2 ,'EE555555'),
+('Zerouali', 'Nadia', 'nadia@gmail.com', 2 ,'FF666666'),
+('El Amrani', 'Youssef', 'youssef@gmail.com', 1,'GG777777');
+
+
+
+
+                         --realisation--
+
+        --1. Contraintes d'unicité
+
+--l’adresse email d’un lecteur
+ALTER TABLE lecteurs
+ADD CONSTRAINT uq_email_lecteur UNIQUE (email);
+
+
+
+
+--le numéro CIN d’un membre du personnel
+ALTER TABLE lecteurs
+ADD CONSTRAINT uq_cin_personnel  UNIQUE (cin);
+
+
+
+
+--la combinaison : titre + auteur + année de publication d’un ouvrage
+ALTER TABLE ouvrages
+ADD CONSTRAINT uq_titre_annee UNIQUE (titre, annee_publication);
+
+ALTER TABLE auteurs_ouvrages
+ADD CONSTRAINT uq_auteur_ouvrage UNIQUE (id_auteur, id_ouvrage);
+
+
+
+         --2. Contraintes de validation à ajouter
+
+--l’année de publication d’un ouvrage doit être comprise entre 1862 et l’année courante
+ALTER TABLE ouvrages
+ADD CONSTRAINT chk_annee_publication
+CHECK (
+    annee_publication BETWEEN 1862 AND 2025
+);
 
 
 
 
 
+
+
+
+--protype--
 
 
 
 
 --Affcher tous les rayons de la bibliothèque.
 SELECT * FROM rayons;
-
 
 
 
