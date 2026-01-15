@@ -143,6 +143,14 @@ CREATE TABLE personnel (
 );
 
 
+INSERT INTO personnel (nom, prenom, email, id_chef) VALUES
+('alae', 'Omar', 'omar@gmail.com', NULL),
+('Alaoui', 'Hassan', 'hassan@gmail.com', 1),
+('Idrissi', 'Salma', 'salma@gmail.com', 1),
+('Bennani', 'Khadija', 'khadija@gmail.com', 2),
+('Fassi', 'Mehdi', 'mehdi@gmail.com', 2),
+('Zerouali', 'Nadia', 'nadia@gmail.com', 2),
+('El Amrani', 'Youssef', 'youssef@gmail.com', 1);
 
 
 
@@ -150,44 +158,69 @@ CREATE TABLE personnel (
 
 
 
+
+
+--Affcher tous les rayons de la bibliothèque.
 SELECT * FROM rayons;
 
 
+
+
+--Afficher le nom et le prénom de tous les auteurs.
 SELECT nom , prenom FROM auteurs ;
 
 
+
+--Afficher le titre et l’année de publication de tous les ouvrages.
 SELECT titre , date_publication FROM ouvrages;
 
 
+
+
+--Afficher le nom, le prénom et l’email de tous les lecteurs.
 SELECT nom , prenom , email FROM lecteurs;
 
 
+
+
+--Afficher les ouvrages publiés après l’année 1862.
 SELECT date_publication 
 FROM ouvrages 
 WHERE date_publication>'1862-01-01';
 
 
+
+
+--Afficher les lecteurs dont le nom commence par la lettre B.
 SELECT nom FROM auteurs 
 WHERE nom LIKE 'B%';
 
 
+
+
+--Afficher les ouvrages triés par année de publication (du plus récent au plus ancien).
 SELECT date_publication 
 FROM ouvrages
 ORDER BY date_publication DESC;
 
 
 
+--Afficher les emprunts dont la date de retour effective est nulle.
 SELECT id_ouvrage, date_retour_prevu 
 FROM emprunts
 WHERE date_retour_reelle IS NULL; 
 
 
 
+--Afficher la liste des ouvrages avec le nom de leur rayon.
 SELECT ouvrages.id_ouvrage, ouvrages.titre, rayons.nom 
 FROM ouvrages
 INNER JOIN rayons ON ouvrages.id_rayon = rayons.id_rayon;
 
 
+
+
+--Afficher les titres des ouvrages ainsi que le nom et le prénom de leurs auteurs.
 SELECT   ouvrages.titre , lecteurs.nom , lecteurs.prenom
 FROM emprunts
 INNER JOIN ouvrages ON emprunts.id_ouvrage = ouvrages.id_ouvrage
@@ -195,6 +228,9 @@ INNER JOIN lecteurs ON emprunts.id_lecteur = lecteurs.id_lecteur;
 
 
 
+
+
+--Afficher les lecteurs ayant effectué au moins un emprunt.
 SELECT  nom
 FROM lecteurs 
 WHERE EXISTS (
@@ -205,6 +241,9 @@ WHERE EXISTS (
 
 
 
+
+
+--Afficher le nombre d’ouvrages par rayon.
 SELECT id_rayon, COUNT(id_ouvrage) AS nb_ouvrages
 FROM ouvrages
 GROUP BY id_rayon;
@@ -213,15 +252,71 @@ GROUP BY id_rayon;
 
 
 
+--Modifier l’adresse email d’un lecteur à partir de son identifiant.
+UPDATE lecteurs
+SET email = 'omari.email@example.com'
+WHERE id_lecteur = 1;
 
 
 
 
 
+--Mettre à jour le numéro de téléphone d’un lecteur à partir de son numéro CIN.
+UPDATE lecteurs
+SET telephone = '0612345678'
+WHERE cin = 'AB123456';
 
 
 
-SELECT * FROM Lecteurs;
+
+--Modifier le rayon d’un ouvrage donné.
+UPDATE ouvrages
+SET id_rayon = 3
+WHERE id_ouvrage = 1;
+
+
+
+
+--Mettre à jour la date de retour effective d’un emprunt lors du retour d’un ouvrage.
+UPDATE emprunts
+SET date_retour_effective = CURDATE()
+WHERE id_emprunt = 1;
+
+
+
+
+--Modifier le chef d’un membre du personnel.
+UPDATE personnel
+SET id_chef = 2
+WHERE id_personnel = 3;
+
+
+
+--Supprimer un emprunt à partir de son identifiant.
+DELETE FROM emprunts
+WHERE id_emprunt = 5;
+
+
+
+
+--Supprimer un lecteur n’ayant jamais effectué d’emprunt.
+DELETE FROM lecteurs
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM emprunts
+    WHERE emprunts.id_lecteur = lecteurs.id_lecteur
+);
+
+
+
+--Supprimer un ouvrage qui n’a jamais été emprunté.
+DELETE ouvrages
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM emprunts
+    WHERE emprunts.id_ouvrage = ouvrages.id_ouvrage
+);
+
 
 
 SHOW TABLES;
