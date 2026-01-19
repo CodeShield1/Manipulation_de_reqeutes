@@ -84,7 +84,7 @@ INSERT INTO lecteurs (nom, prenom, telephone, email, CIN) VALUES
 ('Alaoui', 'Hassan', '0623456789', 'hassan@gmail.com', 'BB222222'),
 ('Idrissi', 'Salma', '0634567890', 'salma@gmail.com', 'CC333333'),
 ('Bennani', 'Khadija', '0645678901', 'khadija@gmail.com', 'DD444444'),
-('Fassi', 'Mehdi', '0656789012', 'mehdi@gmail.com', 'EE555555'),
+('Fassi', 'Mehdi' , '0656789012', 'mehdi@gmail.com', 'EE555555'),
 ('Zerouali', 'Nadia', '0667890123', 'nadia@gmail.com', 'FF666666'),
 ('El Amrani', 'Youssef', '0678901234', 'youssef@gmail.com', 'GG777777');
  
@@ -111,6 +111,7 @@ INSERT INTO auteurs_ouvrages (id_auteur, id_ouvrage) VALUES
 (5, 5), 
 (6, 6), 
 (7, 7); 
+
 
 
 
@@ -157,7 +158,7 @@ CREATE TABLE personnel (
 
 SELECT * FROM personnel;
 
-INSERT INTO personnel (nom, prenom, email, id_chef) VALUES
+INSERT INTO personnel (nom, prenom, email, id_chef ,cin) VALUES
 ('alae', 'Omar', 'omar@gmail.com', NULL,'AA111111'),
 ('Alaoui', 'Hassan', 'hassan@gmail.com', 1,'BB222222'),
 ('Idrissi', 'Salma', 'salma@gmail.com', 1   ,'CC333333'),
@@ -178,21 +179,19 @@ ALTER TABLE lecteurs
 ADD CONSTRAINT uq_email_lecteur UNIQUE (email);
 
 
-
-
 --le numéro CIN d’un membre du personnel
 ALTER TABLE lecteurs
 ADD CONSTRAINT uq_cin_personnel  UNIQUE (cin);
 
 
-
-
---la combinaison : titre + auteur + année de publication d’un ouvrage
+--la combinaison  titre + auteur + année de publication d’un ouvrage
 ALTER TABLE ouvrages
 ADD CONSTRAINT uq_titre_annee UNIQUE (titre, annee_publication);
 
 ALTER TABLE auteurs_ouvrages
 ADD CONSTRAINT uq_auteur_ouvrage UNIQUE (id_auteur, id_ouvrage);
+
+
 
 
 
@@ -206,6 +205,171 @@ CHECK (
 );
 
 
+--Numéro de téléphone ≥ 10 caractères
+ALTER TABLE lecteurs
+ADD CONSTRAINT chk_telephone_length
+CHECK (LENGTH(telephone) >= 10);
+
+
+
+ALTER TABLE emprunts
+ADD CONSTRAINT chk_date_emprunt
+CHECK (date_emprunt <= CURDATE());
+
+
+
+-- durée prévue d’emprunt ≤ 30 jours
+ALTER TABLE emprunts
+ADD CONSTRAINT chk_duree_emprunt
+CHECK (DATEDIFF( date_retour_prevu, date_emprunt) <= 30);
+
+
+-- le nom d’un rayon doit être parmi une liste prédéfinie
+ALTER TABLE rayons
+ADD CONSTRAINT chk_nom_rayon
+CHECK (nom IN ('Informatique','Mathématiques','Sciences','Littérature','Histoire','Économie','Philosophie'));
+
+
+
+
+
+-- Trigger pour limiter le nombre d'emprunts en cours à 3 par lecteur
+CREATE TRIGGER trg_max_3_emprunts
+BEFORE INSERT ON emprunts
+FOR EACH ROW
+BEGIN
+    DECLARE nb_emprunts INT;
+
+    SELECT COUNT(*) INTO nb_emprunts
+    FROM emprunts
+    WHERE id_lecteur = NEW.id_lecteur
+      AND date_retour_effective IS NULL;
+
+    IF nb_emprunts >= 3 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Ce lecteur a déjà 3 emprunts en cours';
+    END IF;
+END ;
+
+        |  |
+        |  |
+       \    /
+        \  /
+         \/  
+
+CREATE TRIGGER trg_max_3_emprunts
+BEFORE INSERT ON emprunts
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM emprunts
+        WHERE id_lecteur = NEW.id_lecteur
+          AND date_retour_effective IS NULL
+        LIMIT 3
+        OFFSET 2
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Ce lecteur a déjà 3 emprunts en cours';
+    END IF;
+END$$
+
+
+----------------------------------------------------------------------------
+
+--interdire l'emprunt d'un ouvrage déjà emprunté et non retourné
+CREATE TRIGGER  trg_ouvrage_deja_emprunte
+BEFORE INSERT ON emprunts
+FOR EACH ROW 
+BEGIN
+  DECLARE deja_emprunte INT;
+  SELECT COUNT(*) INTO deja_emprunte
+  FROM emprunts
+  WHERE id_ouvrage = NEW.id_ouvrage
+    AND date_retour_reelle IS NULL;
+
+  IF deja_emprunte > 0 THEN
+    SIGNAL SQLSTATE '45000'
+    SET MESSAGE_TEXT = 'Cet ouvrage est déjà emprunté';
+  END IF;
+END;
+
+        |  |
+        |  |
+       \    /
+        \  /
+         \/        
+
+IF EXISTS (
+   SELECT 1
+   FROM emprunts
+   WHERE id_ouvrage = NEW.id_ouvrage
+     AND date_retour_reelle IS NULL
+) THEN
+   SIGNAL SQLSTATE '45000'
+   SET MESSAGE_TEXT = 'Cet ouvrage est déjà emprunté';
+END IF;     
+
+
+
+
+
+
+--vérifier lors de la mise à jour que la date de retour effective est supérieure ou égale à la date d’emprunt
+CREATE TRIGGER trg_verif_date_retour
+BEFORE UPDATE ON emprunts
+FOR EACH ROW
+BEGIN
+    IF NEW.date_retour_reelle IS NOT NULL
+       AND NEW.date_retour_reelle < OLD.date_emprunt THEN
+       
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Date de retour invalide : elle est antérieure à la date d’emprunt';
+    END IF;
+END;
+
+
+
+
+--interdire la suppression d’un ouvrage qui est actuellement emprunté
+CREATE TRIGGER trg_interdire_suppression_ouvrage_emprunte
+BEFORE DELETE ON ouvrages
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM emprunts
+        WHERE id_ouvrage = OLD.id_ouvrage
+          AND date_retour_reelle IS NULL
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Impossible de supprimer cet ouvrage : il est actuellement emprunté';
+    END IF;
+END;
+
+
+
+
+
+--bloquer la suppression d’un ouvrage lié à un historique d’emprunts (ou prévoir une règle d’archivage selon choix de conception)
+CREATE TRIGGER trg_block_delete_ouvrage
+BEFORE DELETE ON ouvrages
+FOR EACH ROW
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM emprunts
+        WHERE id_ouvrage = OLD.id_ouvrage
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 
+        'Suppression interdite : cet ouvrage a deja ete emprunte';
+    END IF;
+END;
+
+
+
+
 
 
 
@@ -213,8 +377,6 @@ CHECK (
 
 
 --protype--
-
-
 
 
 --Affcher tous les rayons de la bibliothèque.
