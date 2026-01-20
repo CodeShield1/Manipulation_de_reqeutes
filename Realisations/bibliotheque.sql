@@ -366,3 +366,29 @@ BEGIN
         'Suppression interdite : cet ouvrage a deja ete emprunte';
     END IF;
 END;
+
+
+
+
+
+
+--Top 5 des ouvrages les plus empruntés 
+SELECT ouvrages.titre, COUNT(emprunts.id_emprunt) AS nb_emprunts
+FROM emprunts 
+JOIN ouvrages o ON emprunts.id_ouvrage = ouvrages.id_ouvrage
+GROUP BY ouvrages.id_ouvrage
+ORDER BY nb_emprunts DESC
+LIMIT 5;
+
+
+--Liste des lecteurs « fidèles » (ayant effectué plus de 3 emprunts)
+SELECT lecteurs.nom, COUNT(emprunts.id_emprunt) AS total_emprunts
+FROM emprunts 
+JOIN lecteurs  ON emprunts.id_lecteur = lecteurs.id_lecteur
+GROUP BY lecteurs.id_lecteur,
+HAVING COUNT(emprunts.id_emprunt) > 3;
+
+
+
+
+
